@@ -1,0 +1,62 @@
+services:
+  auth:
+    image: registry.gitlab.com/csir-meme/deploy/authportal:latest
+    init: true
+    environment:
+      - DOMAIN
+      - CLIENT_ID
+      - CLIENT_SECRET
+      - CBS
+      - PROTOCOL_HEADER=x-forwarded-proto
+      - HOST_HEADER=x-forwarded-host
+
+  caddy:
+    image: caddy:2
+    volumes:
+      - data:/data
+      - config:/config
+    configs:
+      - source: caddy
+        target: /etc/caddy/Caddyfile
+    ports:
+      - 80:80
+      # Enable host mode in swarm mode to preserve original client ip # https://github.com/moby/moby/issues/25526
+      - target: 443
+        published: 443
+        protocol: tcp
+        mode: host
+    environment:
+      - CBS
+    # TODO only for testing on localhost ... or at least where we have both a cbs and cdn on same instance?
+    networks:
+      default:
+        aliases:
+          - ${CBS}
+          - cdn.test.localhost
+
+  cbs:
+    image: registry.gitlab.com/csir-meme/deploy/cbs:latest
+    environment:
+      - DOMAIN
+      - CLIENT_ID
+      - CLIENT_SECRET
+      - DATABASE_URL=http://db:8080
+      - PROTOCOL_HEADER=x-forwarded-proto
+      - HOST_HEADER=x-forwarded-host
+    volumes:
+      - db:/app/db
+
+  db:
+    image: ghcr.io/tursodatabase/libsql-server:latest
+    volumes:
+      - db:/var/lib/sqld
+
+configs:
+  caddy:
+    name: caddy-v20
+    file: caddy/etc/caddy/Caddyfile
+
+volumes:
+  config:
+  data:
+  db:

@@ -1,0 +1,42 @@
+services:
+  cdn:
+    image: registry.gitlab.com/csir-meme/deploy/cdn:latest
+    init: true
+    environment:
+      - DOMAIN
+      - CLIENT_ID
+      - CLIENT_SECRET
+      - CBS
+      - PROTOCOL_HEADER=x-forwarded-proto
+      - HOST_HEADER=x-forwarded-host
+    volumes:
+      - uploads:/app/uploads
+      - content:/app/content
+      - db:/app/db
+
+  redis:
+    image: redis
+    volumes:
+      - redis:/data
+
+  tus:
+    image: tusproject/tusd:v1
+    command: >
+      -hooks-http http://cdn:3000/admin/uploads/progress
+      -hooks-http-forward-headers X-User
+      -behind-proxy
+      -upload-dir /app/uploads
+    volumes:
+      - uploads:/app/uploads
+
+  worker:
+    image: registry.gitlab.com/csir-meme/deploy/worker:latest
+    volumes:
+      - uploads:/app/uploads
+      - content:/app/content
+
+volumes:
+  uploads:
+  content:
+  db:
+  redis:

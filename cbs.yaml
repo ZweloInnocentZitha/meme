@@ -1,0 +1,84 @@
+clients:
+  - name: cbs
+    description: The Content Brokering Server
+    logo_uri: https://picsum.photos/seed/cbs/150
+    app_type: regular_web
+    grant_types:
+      - client_credentials
+      - authorization_code
+    token_endpoint_auth_method: client_secret_post
+    callbacks:
+      - ##CBS_DOMAIN##/auth/callback
+    allowed_logout_urls:
+      - ##CBS_DOMAIN##/
+    jwt_configuration:
+      alg: RS256
+
+databases:
+  - name: cbs
+    strategy: auth0
+    enabled_clients:
+      - cbs
+    options:
+      passwordPolicy: none
+
+connections:
+  - name: google-oauth2
+    strategy: google-oauth2
+    enabled_clients:
+      - cbs
+
+resourceServers:
+  - name: c-me
+    identifier: https://c-me
+    scopes: []
+    skip_consent_for_verifiable_first_party_clients: true
+
+actions:
+  - name: AddRoles
+    code: ./actions/AddRoles/code.js
+    deployed: true
+    runtime: node18-actions
+    supported_triggers:
+      - id: post-login
+        version: v3
+  - name: AddAdminRoles
+    code: ./actions/AddAdminRoles/code.js
+    deployed: true
+    runtime: node18-actions
+    supported_triggers:
+      - id: credentials-exchange
+        version: v2
+
+triggers:
+  post-login:
+    - action_name: AddRoles
+      display_name: AddRoles
+  credentials-exchange:
+    - action_name: AddAdminRoles
+      display_name: AddAdminRoles
+
+clientGrants:
+  - client_id: cbs
+    audience: https://c-me
+    scope: []
+  - client_id: cbs
+    audience: https://##AUTH0_DOMAIN##/api/v2/
+    scope:
+      - read:client_keys
+      # clients
+      - create:clients
+      - read:clients
+      - update:clients
+      # users
+      - create:users
+      - read:users
+      - update:users
+      # connections
+      - create:connections
+      - read:connections
+      - update:connections
+
+tenant:
+  flags:
+    enable_client_connections: false
